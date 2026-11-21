@@ -1,0 +1,334 @@
+
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>가위바위보 룰렛</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #e5f0ff, #fff0e5);
+    font-family: "Malgun Gothic", sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    width: 100%;
+    max-width: 700px;
+    background: white;
+    border-radius: 30px;
+    padding: 35px 20px;
+    text-align: center;
+    box-shadow: 0 10px 35px rgba(0,0,0,0.12);
+}
+
+h1 {
+    font-size: 40px;
+    color: #234577;
+    margin: 5px 0 15px;
+}
+
+.subtitle {
+    font-size: 22px;
+    color: #666;
+    margin-bottom: 25px;
+}
+
+.result {
+    font-size: 42px;
+    font-weight: bold;
+    color: #e45c28;
+    min-height: 65px;
+    margin: 15px 0;
+}
+
+.wheel-area {
+    position: relative;
+    width: min(80vw, 440px);
+    height: min(80vw, 440px);
+    margin: 25px auto 35px;
+}
+
+.pointer {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 24px solid transparent;
+    border-right: 24px solid transparent;
+    border-top: 48px solid #252525;
+    z-index: 5;
+}
+
+.wheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    position: relative;
+    overflow: hidden;
+    border: 9px solid #26374c;
+    background: conic-gradient(
+        from -60deg,
+        #ffca45 0deg 120deg,
+        #4d91ed 120deg 240deg,
+        #ef6262 240deg 360deg
+    );
+    box-shadow:
+        0 8px 18px rgba(0,0,0,0.2),
+        inset 0 0 0 5px white;
+    transform: rotate(0deg);
+    transition: transform 5s cubic-bezier(0.12, 0.75, 0.12, 1);
+}
+
+.label {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    left: 0;
+    top: 0;
+    display: flex;
+    justify-content: center;
+    font-size: 48px;
+    font-weight: bold;
+    color: #252525;
+    padding-top: 48px;
+    pointer-events: none;
+    text-shadow: 1px 2px 3px rgba(255,255,255,0.5);
+}
+
+.label1 {
+    transform: rotate(0deg);
+}
+
+.label2 {
+    transform: rotate(120deg);
+}
+
+.label3 {
+    transform: rotate(240deg);
+}
+
+button {
+    display: block;
+    width: 85%;
+    max-width: 400px;
+    margin: 15px auto;
+    padding: 23px;
+    border: none;
+    border-radius: 18px;
+    font-size: 30px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+button:active {
+    transform: scale(0.97);
+}
+
+#spinBtn {
+    background: #1765c1;
+    color: white;
+    box-shadow: 0 6px 0 #10488c;
+}
+
+#resetBtn {
+    background: #eeeeee;
+    color: #444;
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.footer {
+    font-size: 17px;
+    color: #888;
+    margin-top: 25px;
+}
+
+@media (max-width: 500px) {
+    h1 {
+        font-size: 31px;
+    }
+
+    .subtitle {
+        font-size: 19px;
+    }
+
+    .label {
+        font-size: 37px;
+        padding-top: 35px;
+    }
+
+    .result {
+        font-size: 34px;
+    }
+
+    button {
+        font-size: 25px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wheel {
+        transition-duration: 0.5s;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🎯 가위바위보 룰렛</h1>
+
+    <div class="subtitle">
+        원판을 돌려 오늘의 운을 확인하세요!
+    </div>
+
+    <div class="result" id="result">
+        결과를 기다리는 중!
+    </div>
+
+    <div class="wheel-area">
+
+        <!-- 원판을 가리키는 화살표 -->
+        <div class="pointer"></div>
+
+        <!-- 룰렛 원판 -->
+        <div class="wheel" id="wheel">
+
+            <div class="label label1">가위</div>
+            <div class="label label2">바위</div>
+            <div class="label label3">보</div>
+
+        </div>
+    </div>
+
+    <button id="spinBtn" onclick="spinWheel()">
+        🎡 돌리기
+    </button>
+
+    <button id="resetBtn" onclick="resetWheel()">
+        🔄 다시 돌리기
+    </button>
+
+    <div class="footer">
+        가위 · 바위 · 보 중 하나가 무작위로 결정됩니다.
+        <br><br>
+        즐겁게 이용하세요! 🍀
+    </div>
+
+</div>
+
+<script>
+const wheel = document.getElementById("wheel");
+const result = document.getElementById("result");
+const spinBtn = document.getElementById("spinBtn");
+
+const choices = ["가위", "바위", "보"];
+
+let currentRotation = 0;
+let isSpinning = false;
+
+// 무작위 숫자 생성
+function randomIndex() {
+    const array = new Uint32Array(1);
+    const limit = Math.floor(4294967296 / 3) * 3;
+
+    do {
+        crypto.getRandomValues(array);
+    } while (array[0] >= limit);
+
+    return array[0] % 3;
+}
+
+// 룰렛 돌리기
+function spinWheel() {
+
+    if (isSpinning) return;
+
+    isSpinning = true;
+
+    spinBtn.disabled = true;
+    spinBtn.textContent = "🎡 룰렛 회전 중...";
+
+    result.textContent = "행운의 결과는?";
+
+    // 0~2 중 하나 선택
+    const selected = randomIndex();
+
+    // 원판의 각 칸 중심 각도
+    // 가위: 0도, 바위: 120도, 보: 240도
+    // 포인터는 위쪽(270도)을 가리킴
+    const targetAngle = (270 - selected * 120 + 360) % 360;
+
+    // 최소 5바퀴 이상 회전
+    const extraRotation = 360 * (5 + randomIndex());
+
+    const currentNormalized =
+        ((currentRotation % 360) + 360) % 360;
+
+    const additionalAngle =
+        (targetAngle - currentNormalized + 360) % 360;
+
+    currentRotation += extraRotation + additionalAngle;
+
+    wheel.style.transform =
+        `rotate(${currentRotation}deg)`;
+
+    // 회전 종료 후 결과 표시
+    wheel.addEventListener("transitionend", function handler() {
+
+        wheel.removeEventListener("transitionend", handler);
+
+        result.textContent = "🎉 결과: " + choices[selected] + "!";
+
+        spinBtn.disabled = false;
+        spinBtn.textContent = "🎡 돌리기";
+
+        isSpinning = false;
+
+    }, { once: true });
+}
+
+// 다시 돌리기
+function resetWheel() {
+
+    if (isSpinning) return;
+
+    currentRotation = 0;
+
+    wheel.style.transition = "none";
+    wheel.style.transform = "rotate(0deg)";
+
+    // 브라우저에 초기 상태 반영
+    wheel.offsetHeight;
+
+    wheel.style.transition =
+        "transform 5s cubic-bezier(0.12, 0.75, 0.12, 1)";
+
+    result.textContent = "결과를 기다리는 중!";
+
+    spinBtn.disabled = false;
+    spinBtn.textContent = "🎡 돌리기";
+}
+</script>
+
+</body>
+</html>
